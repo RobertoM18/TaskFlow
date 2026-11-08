@@ -1,30 +1,48 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:task_flow/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('TaskFlow permite agregar y completar tareas', (
+    WidgetTester tester,
+  ) async {
+    // Iniciar la aplicación TaskFlow
+    await tester.pumpWidget(const TaskFlowApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Verificar el contador inicial
+    expect(find.text('6'), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    // Verificar las tareas completadas inicialmente
+    expect(find.text('Completadas hoy: 0 de 5'), findsOneWidget);
+
+    // Buscar el botón Agregar tarea
+    final addButton = find.text('Agregar tarea');
+
+    // Desplazarse hasta que sea visible
+    await tester.ensureVisible(addButton);
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Presionar Agregar tarea
+    await tester.tap(addButton);
+    await tester.pump();
+
+    // Verificar que pendientes aumentó a 7
+    expect(find.text('7'), findsOneWidget);
+
+    // Buscar el botón Completar tarea
+    final completeButton = find.text('Completar tarea');
+
+    // Desplazarse hasta hacerlo visible
+    await tester.ensureVisible(completeButton);
+    await tester.pump();
+
+    // Completar una tarea
+    await tester.tap(completeButton);
+    await tester.pump();
+
+    // Verificar que pendientes volvió a 6
+    expect(find.text('6'), findsOneWidget);
+
+    // Verificar que completadas aumentó a 1
+    expect(find.text('Completadas hoy: 1 de 5'), findsOneWidget);
   });
 }
