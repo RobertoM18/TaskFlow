@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 void main() {
   runApp(const TaskFlowApp());
@@ -10,14 +11,14 @@ class TaskFlowApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'TaskFlow',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
         useMaterial3: true,
       ),
-      home: const WelcomeScreen(),
+      routerConfig: appRouter,
     );
   }
 }
@@ -89,12 +90,31 @@ const List<Task> demoTasks = [
   ),
 ];
 
+final sessionTasks = ValueNotifier<List<Task>>(List.of(demoTasks));
+
+final appRouter = GoRouter(
+  routes: [
+    GoRoute(
+      path: '/',
+      builder: (context, state) => const TaskListScreen(),
+      routes: [
+        GoRoute(
+          path: 'task/:id',
+          builder: (context, state) => TaskDetailScreen(
+            taskId: int.tryParse(state.pathParameters['id'] ?? ''),
+          ),
+        ),
+      ],
+    ),
+  ],
+);
+
 // COMPONENTE REUTILIZABLE TASKCARD
 class TaskCard extends StatelessWidget {
-  const TaskCard({super.key, required this.task, required this.onDetail});
+  const TaskCard({super.key, required this.task, this.onTap});
 
   final Task task;
-  final VoidCallback onDetail;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -147,25 +167,25 @@ class TaskCard extends StatelessWidget {
         // Acción visual de detalle
         trailing: IconButton(
           tooltip: 'Ver detalle',
-          onPressed: onDetail,
+          onPressed: onTap,
           icon: const Icon(Icons.chevron_right_rounded),
         ),
 
-        onTap: onDetail,
+        onTap: onTap,
       ),
     );
   }
 }
 
 // PANTALLA PRINCIPAL CON ESTADO
-class WelcomeScreen extends StatefulWidget {
-  const WelcomeScreen({super.key});
+class TaskListScreen extends StatefulWidget {
+  const TaskListScreen({super.key});
 
   @override
-  State<WelcomeScreen> createState() => _WelcomeScreenState();
+  State<TaskListScreen> createState() => _TaskListScreenState();
 }
 
-class _WelcomeScreenState extends State<WelcomeScreen> {
+class _TaskListScreenState extends State<TaskListScreen> {
   // Datos que no se reasignan
   final String studentName = 'Roberto Mero';
 
@@ -178,7 +198,21 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   static const dailyGoal = 5;
 
   // Lista local inicializada con demoTasks
-  final List<Task> _tasks = List.of(demoTasks);
+  List<Task> get _tasks => sessionTasks.value;
+
+  @override
+  void initState() {
+    super.initState();
+    sessionTasks.addListener(_refresh);
+  }
+
+  void _refresh() => setState(() {});
+
+  @override
+  void dispose() {
+    sessionTasks.removeListener(_refresh);
+    super.dispose();
+  }
 
   // Contar tareas pendientes
   int get pendingTasks => _tasks.where((task) => !task.isCompleted).length;
@@ -235,33 +269,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       const SnackBar(
         content: Text('¡Tarea completada con éxito!'),
         duration: Duration(seconds: 2),
-      ),
-    );
-  }
-
-  // Mostrar detalle de una tarea sin otra pantalla
-  void _showTaskDetail(Task task) {
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(task.title),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(task.description),
-            const SizedBox(height: 12),
-            Text('Prioridad: ${task.priority}'),
-            const SizedBox(height: 8),
-            Text('Estado: ${task.isCompleted ? "Completada" : "Pendiente"}'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cerrar'),
-          ),
-        ],
       ),
     );
   }
@@ -437,7 +444,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   return TaskCard(
                     key: ValueKey(task.id),
                     task: task,
-                    onDetail: () => _showTaskDetail(task),
+                    onTap: () => context.push('/task/${task.id}'),
                   );
                 },
               ),
@@ -445,6 +452,93 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class TaskDetailScreen extends StatelessWidget {
+  const TaskDetailScreen({super.key, required this.taskId});
+
+  final int? taskId;
+
+  void _back(BuildContext context) {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<List<Task>>(
+      valueListenable: sessionTasks,
+      builder: (context, items, child) {
+        final index = items.indexWhere((task) => task.id == taskId);
+        final task = index < 0 ? null : items[index];
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Detalle de tarea'),
+            leading: BackButton(onPressed: () => _back(context)),
+          ),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (task == null)
+                    const Text('Tarea no encontrada')
+                  else ...[
+                    Text(
+                      task.title,
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(task.description),
+                    const SizedBox(height: 16),
+                    Chip(label: Text('Prioridad: ${task.priority}')),
+                    const SizedBox(height: 12),
+                    Text(
+                      task.isCompleted
+                          ? 'Estado: completada'
+                          : 'Estado: pendiente',
+                    ),
+                    const SizedBox(height: 24),
+                    FilledButton.icon(
+                      onPressed: () {
+                        sessionTasks.value = [
+                          for (final item in items)
+                            if (item.id == task.id)
+                              item.copyWith(isCompleted: !item.isCompleted)
+                            else
+                              item,
+                        ];
+                      },
+                      icon: Icon(
+                        task.isCompleted
+                            ? Icons.undo
+                            : Icons.check_circle_outline,
+                      ),
+                      label: Text(
+                        task.isCompleted
+                            ? 'Marcar como pendiente'
+                            : 'Marcar como completada',
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  FilledButton.tonalIcon(
+                    onPressed: () => _back(context),
+                    icon: const Icon(Icons.arrow_back),
+                    label: const Text('Volver al listado'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
