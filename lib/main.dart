@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'models/task.dart';
+
 void main() {
   runApp(const TaskFlowApp());
 }
@@ -23,33 +25,8 @@ class TaskFlowApp extends StatelessWidget {
   }
 }
 
-// MODELO DE DATOS
-class Task {
-  const Task({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.priority,
-    required this.isCompleted,
-  });
-
-  final int id;
-  final String title;
-  final String description;
-  final String priority;
-  final bool isCompleted;
-
-  // Crea una copia de la tarea con un nuevo estado
-  Task copyWith({bool? isCompleted}) {
-    return Task(
-      id: id,
-      title: title,
-      description: description,
-      priority: priority,
-      isCompleted: isCompleted ?? this.isCompleted,
-    );
-  }
-}
+// Usuario local de demostración; no representa una sesión autenticada.
+const demoUserId = 1;
 
 // CINCO TAREAS LOCALES DE PRUEBA
 const List<Task> demoTasks = [
@@ -59,6 +36,7 @@ const List<Task> demoTasks = [
     description: 'Revisar ListView.builder',
     priority: 'Alta',
     isCompleted: false,
+    userId: demoUserId,
   ),
   Task(
     id: 2,
@@ -66,6 +44,7 @@ const List<Task> demoTasks = [
     description: 'Definir la tarjeta de tarea',
     priority: 'Media',
     isCompleted: false,
+    userId: demoUserId,
   ),
   Task(
     id: 3,
@@ -73,6 +52,7 @@ const List<Task> demoTasks = [
     description: 'Tomar captura del avance',
     priority: 'Baja',
     isCompleted: true,
+    userId: demoUserId,
   ),
   Task(
     id: 4,
@@ -80,6 +60,7 @@ const List<Task> demoTasks = [
     description: 'Priorizar pendientes',
     priority: 'Alta',
     isCompleted: false,
+    userId: demoUserId,
   ),
   Task(
     id: 5,
@@ -87,6 +68,7 @@ const List<Task> demoTasks = [
     description: 'Ejecutar flutter analyze',
     priority: 'Media',
     isCompleted: false,
+    userId: demoUserId,
   ),
 ];
 
@@ -241,6 +223,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
           description: 'Tarea agregada desde TaskFlow.',
           priority: 'Media',
           isCompleted: false,
+          userId: demoUserId,
         ),
       );
     });
