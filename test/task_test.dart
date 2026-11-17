@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:task_flow/main.dart';
-import 'package:task_flow/models/task.dart';
+import 'package:task_flow/features/tasks/data/demo_tasks.dart';
+import 'package:task_flow/features/tasks/domain/task.dart';
 
 void main() {
   final validJson = <String, dynamic>{

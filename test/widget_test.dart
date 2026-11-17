@@ -3,7 +3,11 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:task_flow/main.dart';
+import 'package:task_flow/app/task_flow_app.dart';
+import 'package:task_flow/features/tasks/data/demo_tasks.dart';
+import 'package:task_flow/features/tasks/presentation/task_list_view.dart';
+import 'package:task_flow/features/tasks/presentation/task_detail_view.dart';
+import 'package:task_flow/features/tasks/presentation/widgets/task_card.dart';
 
 void main() {
   setUpAll(() async {
@@ -27,8 +31,6 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    sessionTasks.value = List.of(demoTasks);
-    appRouter.go('/');
     await tester.pumpWidget(const TaskFlowApp());
     await tester.pumpAndSettle();
     expect(find.byType(TaskCard), findsNWidgets(5));
@@ -40,9 +42,7 @@ void main() {
       await tester.tap(find.text(task.title));
       await tester.pumpAndSettle();
       expect(
-        GoRouterState.of(tester.element(find.byType(TaskDetailScreen)))
-            .uri
-            .path,
+        GoRouterState.of(tester.element(find.byType(TaskDetailView))).uri.path,
         '/task/${task.id}',
       );
       expect(find.text(task.description), findsOneWidget);
@@ -85,7 +85,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Pendientes: 4'), findsOneWidget);
     for (final id in ['3', '999', 'abc']) {
-      appRouter.go('/task/$id');
+      GoRouter.of(tester.element(find.byType(TaskListView))).go('/task/$id');
       await tester.pumpAndSettle();
       expect(
         find.text(id == '3' ? 'Estado: completada' : 'Tarea no encontrada'),

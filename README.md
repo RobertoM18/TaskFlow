@@ -44,7 +44,7 @@ Revisión de las historias: cada una identifica un actor, una acción y un benef
 
 ## Modelo principal: Task
 
-Implementación: `lib/models/task.dart`. El modelo describe información del dominio, no colores, iconos, rutas o widgets.
+Implementación: `lib/features/tasks/domain/task.dart`. El modelo describe información del dominio, no colores, iconos, rutas o widgets.
 
 | Propiedad Dart / JSON | Tipo | Significado |
 | --- | --- | --- |
@@ -78,7 +78,7 @@ final tasks = (jsonDecode(listJsonText) as List<dynamic>)
     .toList();
 ```
 
-Estos fragmentos requieren importar `dart:convert` y el modelo. `demoTasks` en `lib/main.dart` contiene cinco objetos locales con ids distintos, las tres prioridades y ambos estados, asociados a `demoUserId`.
+Estos fragmentos requieren importar `dart:convert` y el modelo. `demoTasks` en `lib/features/tasks/data/demo_tasks.dart` contiene cinco objetos locales con ids distintos, las tres prioridades y ambos estados, asociados a `demoUserId`.
 
 ## Boceto de tres pantallas
 
@@ -152,3 +152,50 @@ flutter run
 ```
 
 `test/task_test.dart` verifica la conversión objeto → texto JSON → objeto, listas JSON, datos inválidos, propiedad de las tareas y conservación de identidad al actualizar. `test/widget_test.dart` comprueba listado → detalle → regreso, cambio de estado y rutas inválidas; incluye las capturas existentes de `test/evidence/`.
+
+
+## Arquitectura MVVM por funcionalidad
+
+```text
+lib/
+  main.dart                         # Punto de entrada
+  app/
+    task_flow_app.dart               # Inyección con Provider y ciclo de vida
+    app_router.dart                  # Rutas / y /task/:id
+  core/theme/app_theme.dart          # Tema compartido
+  features/tasks/
+    domain/task.dart                 # Entidad y contrato JSON
+    data/
+      demo_tasks.dart                # Cinco tareas y usuario de demostración
+      task_repository.dart           # Contrato observable, fuente de verdad
+      local_task_repository.dart     # Identidad, estado y conversión JSON
+      task_service.dart              # Contrato de acceso a la fuente local
+      local_task_service.dart        # Almacenamiento JSON en memoria
+    presentation/
+      tasks_view_model.dart          # Estado derivado y acciones de pantalla
+      task_list_view.dart            # Listado y eventos visuales
+      task_detail_view.dart          # Detalle, navegación y eventos
+      widgets/task_card.dart         # Tarjeta reutilizable
+```
+
+Recorrido de una acción: **View → TasksViewModel → TaskRepository → TaskService**. Por ejemplo, al marcar una tarea, la View invoca `toggleTask(id)`, el ViewModel busca la tarea del usuario actual y solicita `setCompleted`, el Repository construye una nueva lista y la guarda mediante el Service. Solo después de guardar publica el estado y notifica; el ViewModel propaga la notificación y Provider reconstruye listado y detalle.
+
+- **View:** muestra los datos y captura eventos con `context.watch` y `context.read`. Conserva navegación, estilos y SnackBars; no modifica listas ni accede a servicios.
+- **ViewModel:** expone tareas, contadores, meta diaria y acciones de agregar/completar/reabrir. Depende del contrato Repository, no dibuja widgets ni contiene `BuildContext`. Filtra los datos por el usuario de la demostración.
+- **Repository:** es la fuente de verdad de la aplicación. Expone listas inmutables, asigna ids locales, transforma JSON en `Task`, guarda antes de notificar y oculta la implementación del Service.
+- **Service:** conoce la fuente concreta. En esta sesión es local, síncrona y en memoria; devuelve copias de mapas JSON para evitar modificaciones externas. No se hacen peticiones HTTP. Al integrar la API propuesta, un Service remoto manejará métodos HTTP, endpoints, códigos y errores; los contratos pasarán a `Future` y el ViewModel incorporará carga/error. Esa integración sigue pendiente.
+- **Provider:** `MultiProvider` crea el Service, el Repository y un ViewModel compartido sobre las rutas. `ChangeNotifierProvider` libera Repository y ViewModel al desmontar la app; el ViewModel elimina su listener. El router pertenece a la instancia de la app y también se libera. No quedan listas de tareas ni routers globales mutables.
+
+Una pantalla no debe hacer HTTP directamente: mezclar transporte con widgets acopla el diseño a los endpoints, duplica carga y errores y dificulta probar reglas sin red. La separación permite sustituir el Service en pruebas y conservar las Views cuando cambie el origen de datos. El servicio local no implementa ni simula una API HTTP real.
+
+### Evidencia de la reorganización
+
+Las pruebas visuales existentes comparan listado y detalle contra las mismas capturas, sin regenerarlas. Las pruebas de navegación conservan agregar, completar, reabrir y regresar. `test/tasks_architecture_test.dart` verifica el recorrido completo entre capas, notificaciones compartidas, aislamiento de usuario e instancias, listas inmutables, fallo de guardado y liberación de listeners. Las pruebas JSON siguen cubriendo el modelo en su nueva ubicación.
+
+```sh
+flutter analyze
+flutter test
+flutter build apk --debug
+```
+
+El comportamiento visible sigue siendo el de la demostración local. No hay cambios visuales que requieran Hot Reload; después de mover archivos e introducir la raíz de Provider, una sesión de desarrollo abierta debe reiniciarse con Hot Restart.
