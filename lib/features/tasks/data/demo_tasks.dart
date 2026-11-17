@@ -7,40 +7,44 @@ const demoUserId = 1;
 const List<Task> demoTasks = [
   Task(
     id: 1,
-    title: 'Leer documentación',
-    description: 'Revisar ListView.builder',
+    title: 'Preparar exposición de TaskFlow',
+    description:
+        'Organizar las diapositivas y ensayar la explicación del proyecto.',
     priority: 'Alta',
     isCompleted: false,
     userId: demoUserId,
   ),
   Task(
     id: 2,
-    title: 'Diseñar la pantalla',
-    description: 'Definir la tarjeta de tarea',
+    title: 'Practicar navegación por rutas',
+    description: 'Abrir las cinco tareas por su id y regresar al listado.',
     priority: 'Media',
     isCompleted: false,
     userId: demoUserId,
   ),
   Task(
     id: 3,
-    title: 'Preparar evidencia',
-    description: 'Tomar captura del avance',
+    title: 'Documentar el modelo de tareas',
+    description:
+        'Describir los seis campos de Task y un ejemplo JSON en el README.',
     priority: 'Baja',
     isCompleted: true,
     userId: demoUserId,
   ),
   Task(
     id: 4,
-    title: 'Organizar el backlog',
-    description: 'Priorizar pendientes',
+    title: 'Repasar arquitectura MVVM',
+    description:
+        'Explicar el recorrido desde la View hasta el Service con un ejemplo.',
     priority: 'Alta',
     isCompleted: false,
     userId: demoUserId,
   ),
   Task(
     id: 5,
-    title: 'Revisar código',
-    description: 'Ejecutar flutter analyze',
+    title: 'Validar TaskFlow en el teléfono',
+    description:
+        'Probar el listado, el detalle y el cambio de estado en Android.',
     priority: 'Media',
     isCompleted: false,
     userId: demoUserId,

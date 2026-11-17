@@ -47,6 +47,9 @@ class TaskDetailView extends StatelessWidget {
                 Text(
                   task.isCompleted ? 'Estado: completada' : 'Estado: pendiente',
                 ),
+                const SizedBox(height: 8),
+                Text('Identificador: ${task.id}'),
+                Text('Usuario: ${task.userId}'),
                 const SizedBox(height: 24),
                 FilledButton.icon(
                   onPressed: () =>

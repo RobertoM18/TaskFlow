@@ -38,7 +38,7 @@ void main() {
       find.byType(TaskFlowApp),
       matchesGoldenFile('evidence/listado.png'),
     );
-    for (final task in demoTasks.take(3)) {
+    for (final task in demoTasks) {
       await tester.tap(find.text(task.title));
       await tester.pumpAndSettle();
       expect(
@@ -46,6 +46,8 @@ void main() {
         '/task/${task.id}',
       );
       expect(find.text(task.description), findsOneWidget);
+      expect(find.text('Identificador: ${task.id}'), findsOneWidget);
+      expect(find.text('Usuario: ${task.userId}'), findsOneWidget);
       if (task.id == 1) {
         await expectLater(
           find.byType(TaskFlowApp),

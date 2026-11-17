@@ -62,8 +62,8 @@ JSON es texto: un objeto usa llaves y una lista usa corchetes. Dart convierte en
 ```json
 {
   "id": 1,
-  "title": "Leer documentación",
-  "description": "Revisar ListView.builder",
+  "title": "Preparar exposición de TaskFlow",
+  "description": "Organizar las diapositivas y ensayar la explicación del proyecto.",
   "priority": "Alta",
   "isCompleted": false,
   "userId": 1
@@ -190,7 +190,7 @@ Una pantalla no debe hacer HTTP directamente: mezclar transporte con widgets aco
 
 ### Evidencia de la reorganización
 
-Las pruebas visuales existentes comparan listado y detalle contra las mismas capturas, sin regenerarlas. Las pruebas de navegación conservan agregar, completar, reabrir y regresar. `test/tasks_architecture_test.dart` verifica el recorrido completo entre capas, notificaciones compartidas, aislamiento de usuario e instancias, listas inmutables, fallo de guardado y liberación de listeners. Las pruebas JSON siguen cubriendo el modelo en su nueva ubicación.
+La reorganización MVVM se verificó contra las capturas originales. En el avance de personalización se actualizaron las capturas para reflejar las tareas académicas y los campos de identificador y usuario visibles en el detalle. Las pruebas de navegación conservan agregar, completar, reabrir y regresar. `test/tasks_architecture_test.dart` verifica el recorrido completo entre capas, notificaciones compartidas, aislamiento de usuario e instancias, listas inmutables, fallo de guardado y liberación de listeners. Las pruebas JSON siguen cubriendo el modelo en su nueva ubicación.
 
 ```sh
 flutter analyze
@@ -198,4 +198,28 @@ flutter test
 flutter build apk --debug
 ```
 
-El comportamiento visible sigue siendo el de la demostración local. No hay cambios visuales que requieran Hot Reload; después de mover archivos e introducir la raíz de Provider, una sesión de desarrollo abierta debe reiniciarse con Hot Restart.
+El comportamiento sigue siendo el de la demostración local. Después de mover archivos e introducir la raíz de Provider, una sesión de desarrollo abierta debe reiniciarse con Hot Restart. Para recargar las tareas iniciales personalizadas en una sesión ya abierta también se necesita Hot Restart, porque el Repository ya conserva su estado en memoria.
+
+
+## Personalización y revisión del laboratorio de modelado
+
+El usuario de prueba es Roberto Mero (`userId: 1`), estudiante que prepara las entregas de su aplicación móvil. Estas cinco tareas son ejemplos académicos adaptados al proyecto, no una afirmación sobre actividades reales realizadas. Sustituyen las tareas genéricas del codelab y conservan ids únicos.
+
+| Id | Tarea | Descripción | Prioridad | Estado | Usuario |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Preparar exposición de TaskFlow | Organizar las diapositivas y ensayar la explicación del proyecto. | Alta | Pendiente | 1 |
+| 2 | Practicar navegación por rutas | Abrir las cinco tareas por su id y regresar al listado. | Media | Pendiente | 1 |
+| 3 | Documentar el modelo de tareas | Describir los seis campos de Task y un ejemplo JSON en el README. | Baja | Completada | 1 |
+| 4 | Repasar arquitectura MVVM | Explicar el recorrido desde la View hasta el Service con un ejemplo. | Alta | Pendiente | 1 |
+| 5 | Validar TaskFlow en el teléfono | Probar el listado, el detalle y el cambio de estado en Android. | Media | Pendiente | 1 |
+
+La lista muestra los títulos, descripciones, prioridades y un icono de estado. El detalle permite comprobar los seis datos: título, descripción, prioridad, estado, identificador y usuario. El icono y el texto de estado distinguen una tarea pendiente de una completada.
+
+El modelo permanece en `lib/features/tasks/domain/task.dart`, ya que el proyecto avanzó a MVVM. No se duplica en `lib/task.dart` ni se reemplaza `main.dart` con la versión monolítica del ejemplo. El formulario y los endpoints continúan siendo requisitos futuros.
+
+Evidencia generada mediante las pruebas de widgets, no mediante una captura de un teléfono:
+
+- [Listado con las cinco tareas](test/evidence/listado.png).
+- [Detalle con identificador y usuario](test/evidence/detalle.png).
+
+`test/widget_test.dart` recorre las cinco tarjetas, comprueba ruta, descripción, prioridad, estado, identificador y usuario, y verifica el regreso al listado. Las pruebas del modelo comprueban ids distintos y conservación del usuario. El ejercicio guiado `bin/model_demo.dart` se ejecuta con Dart puro y se retira antes del commit, como pide el laboratorio; el modelo compartido no importa Flutter.
