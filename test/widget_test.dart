@@ -1,6 +1,9 @@
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:task_flow/features/tasks/presentation/tasks_view_model.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:task_flow/app/task_flow_app.dart';
@@ -98,5 +101,70 @@ void main() {
       expect(find.text('Mis tareas'), findsOneWidget);
       expect(tester.takeException(), isNull);
     }
+  });
+  testWidgets('Comparte ViewModel y conserva el cambio al reabrir el detalle', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1000, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(const TaskFlowApp());
+    await tester.pumpAndSettle();
+    final viewModel = tester
+        .element(find.byType(TaskListView))
+        .read<TasksViewModel>();
+    final first = demoTasks.first;
+    await tester.tap(find.text(first.title));
+    await tester.pumpAndSettle();
+    expect(
+      tester.element(find.byType(TaskDetailView)).read<TasksViewModel>(),
+      same(viewModel),
+    );
+    expect(find.text('Estado: pendiente'), findsOneWidget);
+    await tester.tap(find.text('Marcar como completada'));
+    await tester.pumpAndSettle();
+    expect(find.text('Estado: completada'), findsOneWidget);
+    expect(find.text('Marcar como pendiente'), findsOneWidget);
+    await expectLater(
+      find.byType(TaskFlowApp),
+      matchesGoldenFile('evidence/detalle_completada.png'),
+    );
+    await tester.tap(find.text('Volver al listado'));
+    await tester.pumpAndSettle();
+    final card = find.byKey(ValueKey(first.id));
+    expect(
+      find.descendant(
+        of: card,
+        matching: find.byIcon(Icons.check_circle_rounded),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Pendientes: 3'), findsOneWidget);
+    await expectLater(
+      find.byType(TaskFlowApp),
+      matchesGoldenFile('evidence/listado_completada.png'),
+    );
+    await tester.tap(find.text(first.title));
+    await tester.pumpAndSettle();
+    expect(find.text('Estado: completada'), findsOneWidget);
+    expect(find.text('Identificador: ${first.id}'), findsOneWidget);
+    await tester.tap(find.text('Volver al listado'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(demoTasks[1].title));
+    await tester.pumpAndSettle();
+    expect(find.text('Identificador: ${demoTasks[1].id}'), findsOneWidget);
+    expect(find.text('Estado: pendiente'), findsOneWidget);
+    // Una nueva instancia de la app recupera los datos iniciales en memoria.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(const TaskFlowApp(initialLocation: '/task/1'));
+    await tester.pumpAndSettle();
+    expect(find.text('Estado: pendiente'), findsOneWidget);
+    expect(
+      tester.element(find.byType(TaskDetailView)).read<TasksViewModel>(),
+      isNot(same(viewModel)),
+    );
+    expect(tester.takeException(), isNull);
   });
 }

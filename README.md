@@ -223,3 +223,29 @@ Evidencia generada mediante las pruebas de widgets, no mediante una captura de u
 - [Detalle con identificador y usuario](test/evidence/detalle.png).
 
 `test/widget_test.dart` recorre las cinco tarjetas, comprueba ruta, descripción, prioridad, estado, identificador y usuario, y verifica el regreso al listado. Las pruebas del modelo comprueban ids distintos y conservación del usuario. El ejercicio guiado `bin/model_demo.dart` se ejecuta con Dart puro y se retira antes del commit, como pide el laboratorio; el modelo compartido no importa Flutter.
+
+
+## Verificación del laboratorio «Separar TaskFlow en capas con MVVM»
+
+La arquitectura existente cumple esta sesión y conserva las cinco tareas personalizadas y sus seis campos. Se mantienen los nombres y rutas actuales, equivalentes al ejemplo del laboratorio:
+
+| Ejemplo guiado | Implementación en TaskFlow |
+| --- | --- |
+| `app/taskflow_app.dart` | `app/task_flow_app.dart` y `app/app_router.dart` |
+| `core/app_theme.dart` | `core/theme/app_theme.dart` |
+| `TaskListScreen` / `TaskDetailScreen` | `TaskListView` / `TaskDetailView` |
+| `getTasks()` | Getter inmutable `TaskRepository.tasks` |
+| `findTask(id)` | `TasksViewModel.taskById(id)` |
+| `toggleCompleted(id)` | `TasksViewModel.toggleTask(id)` |
+| `save(task)` | `setCompleted(id, estado)` y `_save` en el repositorio local |
+
+Los objetos de demostración están en `data/demo_tasks.dart`; `LocalTaskService` los entrega a `LocalTaskRepository`. No se duplican ni se trasladan a las Views. Esta separación adicional mantiene todo el acceso a datos dentro de `data`, sin solicitudes HTTP.
+
+Recorrido del botón: `onPressed` obtiene el ViewModel con `context.read`, `toggleTask` invierte el estado, `setCompleted` crea una copia mediante `copyWith`, `_save` guarda en el Service local y el Repository notifica. El ViewModel escucha esa notificación y llama a `notifyListeners`; las Views que usan `context.watch` vuelven a ejecutar `build`. Ambas rutas comparten la única instancia creada sobre el router en `TaskFlowApp`.
+
+Evidencia del avance autónomo (capturas renderizadas por pruebas de widgets):
+
+- [Detalle después de completar la primera tarea](test/evidence/detalle_completada.png).
+- [Listado con el icono de completada y contador actualizado](test/evidence/listado_completada.png).
+
+La prueba «Comparte ViewModel y conserva el cambio al reabrir el detalle» comprueba la identidad del ViewModel en ambas pantallas, el texto y botón del detalle, el icono del listado, la conservación del estado al reabrir, el detalle de un segundo id y el regreso al estado inicial al crear una nueva instancia de la app. La persistencia en disco sigue fuera de esta sesión.
