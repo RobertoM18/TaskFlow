@@ -34,7 +34,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const TaskFlowApp());
+    await tester.pumpWidget(const TaskFlowApp(useLocalTasks: true));
     await tester.pumpAndSettle();
     expect(find.byType(TaskCard), findsNWidgets(5));
     await expectLater(
@@ -109,7 +109,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const TaskFlowApp());
+    await tester.pumpWidget(const TaskFlowApp(useLocalTasks: true));
     await tester.pumpAndSettle();
     final viewModel = tester
         .element(find.byType(TaskListView))
@@ -158,7 +158,9 @@ void main() {
     // Una nueva instancia de la app recupera los datos iniciales en memoria.
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();
-    await tester.pumpWidget(const TaskFlowApp(initialLocation: '/task/1'));
+    await tester.pumpWidget(
+      const TaskFlowApp(initialLocation: '/task/1', useLocalTasks: true),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Estado: pendiente'), findsOneWidget);
     expect(

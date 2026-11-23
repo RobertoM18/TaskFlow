@@ -5,6 +5,8 @@ import '../domain/task.dart';
 /// Fuente de verdad observable; la presentación depende de este contrato.
 abstract class TaskRepository extends ChangeNotifier {
   List<Task> get tasks;
+  Future<List<Task>> getTasks();
+  bool get canCreateTasks => true;
   Task createTask({
     required int userId,
     required String description,

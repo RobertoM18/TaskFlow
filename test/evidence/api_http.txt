@@ -1,0 +1,5 @@
+GET https://jsonplaceholder.typicode.com/todos?userId=2 → HTTP 200
+Verificado: 2026-11-23T00:20:26.314227Z
+Tareas recibidas: 20
+Usuario: 2
+Consulta real con TaskApiService y Dio; sin escrituras remotas.

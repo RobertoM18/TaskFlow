@@ -2,6 +2,8 @@
 
 Aplicación Flutter para organizar tareas personales de estudio y trabajo.
 
+**Versión actual:** consulta por defecto las tareas remotas de JSONPlaceholder del usuario **2**. Las cinco tareas académicas del usuario 1 se conservan en el modo local. Consulta la sección «API de tareas» para ejecutar ambos modos y revisar la evidencia.
+
 ## Problema y usuario objetivo
 
 Un estudiante que combina clases y actividades personales necesita registrar sus pendientes, reconocer su prioridad y consultar su avance sin depender de notas dispersas. El usuario objetivo es un estudiante que administra sus propias tareas desde un teléfono Android. En la demostración local se usa el usuario `1` (Roberto Mero); no existe autenticación todavía.
@@ -51,11 +53,11 @@ Implementación: `lib/features/tasks/domain/task.dart`. El modelo describe infor
 | `id` | `int` | Identificador positivo, único en la colección; el servidor lo asignará al crear. |
 | `title` | `String` | Título no vacío después de quitar espacios. |
 | `description` | `String` | Descripción completa; admite cadena vacía. |
-| `priority` | `String` | Uno de `Alta`, `Media`, `Baja`. |
+| `priority` | `String` | `Alta`, `Media`, `Baja` o el valor explícito `Sin prioridad (API)` al faltar en el servidor. |
 | `isCompleted` | `bool` | `false`: pendiente; `true`: completada. |
 | `userId` | `int` | Identificador positivo del propietario. Un usuario puede tener muchas tareas. |
 
-`Task.fromJson` exige los seis campos con sus tipos y valores válidos y lanza `FormatException` ante datos incompletos o inválidos. `toJson` produce el objeto intercambiable. `copyWith` permite modificar los campos editables y conserva identidad y propietario. El constructor `const` se usa con datos locales conocidos; la validación de entrada JSON se hace en la fábrica. La unicidad del id corresponde a la colección o al servidor.
+`Task.fromJson` valida id, título, usuario y estado; admite `isCompleted` local o `completed` remoto. Si faltan descripción o prioridad (o llegan como null), utiliza `Sin descripción (API)` y `Sin prioridad (API)`. Tipos obligatorios incorrectos y valores inválidos producen `FormatException`. `toJson` produce el objeto intercambiable. `copyWith` permite modificar los campos editables y conserva identidad y propietario. El constructor `const` se usa con datos locales conocidos; la validación de entrada JSON se hace en la fábrica. La unicidad del id corresponde a la colección o al servidor.
 
 JSON es texto: un objeto usa llaves y una lista usa corchetes. Dart convierte entre texto y mapas/listas mediante `jsonDecode` y `jsonEncode` de `dart:convert`.
 
@@ -139,9 +141,9 @@ Errores previstos: `400` para JSON mal formado o id no numérico; `422` para cam
 
 ## Estado actual y verificación
 
-Implementado: cinco tareas locales, listado y detalle por id con GoRouter, adición de una tarea de ejemplo, cambio de estado, propietario local, modelo separado y conversión JSON. La información vive en memoria y se reinicia al cerrar la app. El botón Agregar aún genera un título de ejemplo; no abre un formulario. El contador «Hoy» es una demostración, no una métrica histórica: el modelo no contiene fechas.
+Implementado: consulta remota asíncrona con Dio, carga/error/reintento/lista vacía, listado y detalle por id, cambio de estado en memoria y modelo JSON compatible con ambos orígenes. Como respaldo se conservan cinco tareas locales y la adición de una tarea de ejemplo en modo local. La información vive en memoria y se reinicia al cerrar la app. En modo local, Agregar genera un título de ejemplo; no abre un formulario. En modo remoto está deshabilitado porque esta sesión solo consulta y cambia estados en memoria. El contador «Hoy» es una demostración, no una métrica histórica: el modelo no contiene fechas.
 
-Pendiente: formulario, edición de textos/prioridad desde la interfaz, eliminación, estados de carga/error y backend persistente. Los endpoints anteriores son requisitos, no servicios disponibles.
+Pendiente: formulario, edición de textos/prioridad desde la interfaz, eliminación y backend persistente. Los endpoints CRUD de `/api/tasks` anteriores son requisitos futuros; la consulta de práctica actual usa `/todos`.
 
 ```sh
 flutter pub get
@@ -183,7 +185,7 @@ Recorrido de una acción: **View → TasksViewModel → TaskRepository → TaskS
 - **View:** muestra los datos y captura eventos con `context.watch` y `context.read`. Conserva navegación, estilos y SnackBars; no modifica listas ni accede a servicios.
 - **ViewModel:** expone tareas, contadores, meta diaria y acciones de agregar/completar/reabrir. Depende del contrato Repository, no dibuja widgets ni contiene `BuildContext`. Filtra los datos por el usuario de la demostración.
 - **Repository:** es la fuente de verdad de la aplicación. Expone listas inmutables, asigna ids locales, transforma JSON en `Task`, guarda antes de notificar y oculta la implementación del Service.
-- **Service:** conoce la fuente concreta. En esta sesión es local, síncrona y en memoria; devuelve copias de mapas JSON para evitar modificaciones externas. No se hacen peticiones HTTP. Al integrar la API propuesta, un Service remoto manejará métodos HTTP, endpoints, códigos y errores; los contratos pasarán a `Future` y el ViewModel incorporará carga/error. Esa integración sigue pendiente.
+- **Service:** conoce la fuente concreta. En el modo local es síncrona y en memoria; devuelve copias de mapas JSON para evitar modificaciones externas. El modo remoto usa `TaskApiService` con Dio; el contrato Repository ya expone `Future<List<Task>> getTasks()` y el ViewModel maneja carga/error. El contrato local de almacenamiento JSON continúa separado y síncrono.
 - **Provider:** `MultiProvider` crea el Service, el Repository y un ViewModel compartido sobre las rutas. `ChangeNotifierProvider` libera Repository y ViewModel al desmontar la app; el ViewModel elimina su listener. El router pertenece a la instancia de la app y también se libera. No quedan listas de tareas ni routers globales mutables.
 
 Una pantalla no debe hacer HTTP directamente: mezclar transporte con widgets acopla el diseño a los endpoints, duplica carga y errores y dificulta probar reglas sin red. La separación permite sustituir el Service en pruebas y conservar las Views cuando cambie el origen de datos. El servicio local no implementa ni simula una API HTTP real.
@@ -249,3 +251,58 @@ Evidencia del avance autónomo (capturas renderizadas por pruebas de widgets):
 - [Listado con el icono de completada y contador actualizado](test/evidence/listado_completada.png).
 
 La prueba «Comparte ViewModel y conserva el cambio al reabrir el detalle» comprueba la identidad del ViewModel en ambas pantallas, el texto y botón del detalle, el icono del listado, la conservación del estado al reabrir, el detalle de un segundo id y el regreso al estado inicial al crear una nueva instancia de la app. La persistencia en disco sigue fuera de esta sesión.
+
+
+## API de tareas
+
+- **URL exacta:** <https://jsonplaceholder.typicode.com/todos?userId=2>
+- **Método:** `GET`. **Filtro elegido:** `TaskApiService.userId = 2`, distinto del usuario 1 del ejemplo guiado. El mismo valor se inyecta al ViewModel; no se filtran por error como usuario 1.
+- **Fuente:** JSONPlaceholder, datos públicos ficticios para practicar. No hay autenticación ni envío de datos personales.
+- **Resultado verificado:** HTTP 200 y 20 tareas del usuario 2 (ids 21–40) el 22 de noviembre de 2026, hora de Ecuador. La evidencia registra el instante en UTC.
+
+| Campo que llega | Campo en TaskFlow | Adaptación |
+| --- | --- | --- |
+| `id` | `id` | Entero positivo para navegar al detalle |
+| `userId` | `userId` | Propietario ficticio, en esta consulta 2 |
+| `title` | `title` | Texto del servidor, sin traducir |
+| `completed` | `isCompleted` | Booleano; el formato local `isCompleted` también se admite y tiene prioridad |
+| No llega `description` | `description` | `Sin descripción (API)`, agregado por TaskFlow |
+| No llega `priority` | `priority` | `Sin prioridad (API)`, agregado por TaskFlow |
+
+Los valores por defecto no vienen del servidor ni representan una prioridad real. JSONPlaceholder no cubre todavía el contrato completo del producto final.
+
+### Recorrido y comportamiento
+
+`TaskFlowApp` crea `TaskApiService`, `RemoteTaskRepository` y un único `TasksViewModel` con Provider. La creación del ViewModel llama una vez a `loadTasks()`. El contrato Repository conserva su getter de caché inmutable y añade `Future<List<Task>> getTasks()`; el respaldo local implementa el mismo método asíncrono.
+
+La View nunca llama a Dio. El Service conoce la URL, el filtro, el método GET y los tiempos máximos de conexión y recepción (10 segundos); Dio decodifica el JSON. `Task.fromJson` convierte cada objeto. El Repository actualiza su caché solo después de validar toda la respuesta; el ViewModel recibe la notificación y las Views se reconstruyen con Provider. El Service rechaza respuestas sin lista, filas inválidas, ids duplicados o un usuario distinto del solicitado.
+
+La lista muestra indicador de carga, un mensaje cuando no hay tareas y un error con Reintentar si falla la red. El detalle abierto directamente también espera la carga antes de mostrar los datos o «Tarea no encontrada». No se sustituye una consulta fallida por datos locales sin avisar. Las respuestas tardías no notifican objetos ya liberados.
+
+**Marcar como completada o pendiente solo cambia la copia en memoria.** No se hace POST, PATCH ni DELETE. Volver al listado y reabrir conserva ese cambio durante la sesión; recargar desde la API o reiniciar la app recupera el estado del servidor. Agregar está deshabilitado en modo remoto; su comportamiento de ejemplo se conserva en modo local.
+
+### Ejecutar y comprobar
+
+```sh
+flutter pub get
+flutter run -d chrome
+# Respaldo local: las cinco tareas académicas originales
+flutter run -d chrome --dart-define=USE_LOCAL_TASKS=true
+flutter analyze
+flutter test
+# Consulta real explícita: requiere internet y actualiza la evidencia de respuesta
+flutter test tool/api_smoke_test.dart
+```
+
+El permiso `android.permission.INTERNET` está declarado una sola vez en el manifest principal de Android. Se usa HTTPS. El tema, las rutas y la arquitectura MVVM permanecen separados. Después de añadir Dio y el permiso se requiere reiniciar la ejecución de Flutter.
+
+### Evidencia y pruebas
+
+- [Consola de la consulta real HTTP 200](test/evidence/api_http.txt).
+- [Datos públicos recibidos y normalizados como Task](test/evidence/api_tasks.json).
+- [Listado remoto](test/evidence/listado_api.png).
+- [Detalle remoto con usuario 2 y valores de respaldo](test/evidence/detalle_api.png).
+
+Las capturas se renderizan mediante pruebas de widgets usando la respuesta real guardada; no se presentan como capturas de un teléfono. La petición HTTP real se comprueba separadamente con `tool/api_smoke_test.dart`, que usa el mismo Service y Dio de la app. La suite habitual usa un adaptador HTTP simulado para ser reproducible sin internet.
+
+Las pruebas cubren la URL y el filtro, HTTP no exitoso, timeout, respuesta inválida, lista vacía, reintento, navegación, carga de enlaces directos, cambio local sin otra petición, recuperación del estado remoto al recargar, y liberación durante una petición pendiente. Las pruebas locales y las cinco tareas propias de las sesiones anteriores se mantienen.

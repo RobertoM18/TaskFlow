@@ -16,13 +16,13 @@ class Task {
   final bool isCompleted;
   final int userId;
 
-  /// Contrato JSON completo; no convierte tipos ni inventa campos faltantes.
+  /// Admite JSON local y remoto; los valores API de respaldo son explícitos.
   factory Task.fromJson(Map<String, dynamic> json) {
     final id = json['id'];
     final title = json['title'];
-    final description = json['description'];
-    final priority = json['priority'];
-    final isCompleted = json['isCompleted'];
+    final description = json['description'] ?? 'Sin descripción (API)';
+    final priority = json['priority'] ?? 'Sin prioridad (API)';
+    final isCompleted = json['isCompleted'] ?? json['completed'];
     final userId = json['userId'];
     if (id is! int ||
         id <= 0 ||
@@ -30,7 +30,7 @@ class Task {
         title.trim().isEmpty ||
         description is! String ||
         priority is! String ||
-        !['Alta', 'Media', 'Baja'].contains(priority) ||
+        !['Alta', 'Media', 'Baja', 'Sin prioridad (API)'].contains(priority) ||
         isCompleted is! bool ||
         userId is! int ||
         userId <= 0) {

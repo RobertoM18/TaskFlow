@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../domain/task.dart';
 import 'tasks_view_model.dart';
 import 'widgets/task_card.dart';
+import 'widgets/task_load_status.dart';
 
 class TaskListView extends StatelessWidget {
   const TaskListView({super.key});
@@ -48,169 +49,184 @@ class TaskListView extends StatelessWidget {
         foregroundColor: Colors.white,
       ),
 
-      body: SafeArea(
-        child: Column(
-          children: [
-            // PANEL DE BIENVENIDA
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      body:
+          viewModel.isLoading ||
+              viewModel.errorMessage != null ||
+              viewModel.tasks.isEmpty
+          ? const TaskLoadStatus()
+          : SafeArea(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Ícono centrado
-                  Center(
-                    child: Container(
-                      width: 76,
-                      height: 76,
-                      decoration: BoxDecoration(
-                        color: Colors.indigo.shade50,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.indigo.withValues(alpha: 0.15),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
+                  // PANEL DE BIENVENIDA
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Ícono centrado
+                        Center(
+                          child: Container(
+                            width: 76,
+                            height: 76,
+                            decoration: BoxDecoration(
+                              color: Colors.indigo.shade50,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.indigo.withValues(alpha: 0.15),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.fact_check_rounded,
+                              size: 42,
+                              color: Colors.indigo,
+                            ),
                           ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.fact_check_rounded,
-                        size: 42,
-                        color: Colors.indigo,
-                      ),
-                    ),
-                  ),
+                        ),
 
-                  const SizedBox(height: 12),
+                        const SizedBox(height: 12),
 
-                  // Saludo
-                  Text(
-                    '¡Hola, $studentName!',
-                    style: Theme.of(context).textTheme.titleLarge
-                        ?.copyWith(fontWeight: FontWeight.bold),
-                  ),
+                        // Saludo
+                        Text(
+                          '¡Hola, $studentName!',
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
 
-                  const SizedBox(height: 5),
+                        const SizedBox(height: 5),
 
-                  Text('Bienvenido/a a $courseName.'),
+                        Text('Bienvenido/a a $courseName.'),
 
-                  const SizedBox(height: 5),
+                        const SizedBox(height: 5),
 
-                  Text(
-                    motivationalMessage,
-                    style: const TextStyle(
-                      color: Colors.indigo,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // CONTADORES
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.pending_actions_rounded,
+                        Text(
+                          motivationalMessage,
+                          style: const TextStyle(
                             color: Colors.indigo,
+                            fontWeight: FontWeight.w500,
                           ),
+                        ),
 
-                          const SizedBox(width: 12),
+                        const SizedBox(height: 12),
 
-                          Expanded(
-                            child: Text(
-                              'Pendientes: ${viewModel.pendingTasks}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
+                        // CONTADORES
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.pending_actions_rounded,
+                                  color: Colors.indigo,
+                                ),
+
+                                const SizedBox(width: 12),
+
+                                Expanded(
+                                  child: Text(
+                                    'Pendientes: ${viewModel.pendingTasks}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+
+                                Text(
+                                  'Hoy: ${viewModel.completedTasks}/${TasksViewModel.dailyGoal}',
+                                  style: const TextStyle(
+                                    color: Colors.indigo,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 10),
+
+                        // BOTONES
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: viewModel.canCreateTasks
+                                    ? () => _addTask(context)
+                                    : null,
+                                icon: const Icon(Icons.add),
+                                label: const Text('Agregar'),
                               ),
                             ),
-                          ),
 
-                          Text(
-                            'Hoy: ${viewModel.completedTasks}/${TasksViewModel.dailyGoal}',
+                            const SizedBox(width: 8),
+
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: viewModel.pendingTasks > 0
+                                    ? () => _completeTask(context)
+                                    : null,
+                                icon: const Icon(Icons.check),
+                                label: const Text('Completar'),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 6),
+
+                        Center(
+                          child: Text(
+                            viewModel.canCreateTasks
+                                ? viewModel.statusMessage
+                                : 'Usuario ${viewModel.userId} · Cambios de estado solo en esta sesión',
+                            textAlign: TextAlign.center,
                             style: const TextStyle(
-                              color: Colors.indigo,
-                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              color: Colors.grey,
                             ),
                           ),
-                        ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // TÍTULO DEL LISTADO
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Listado de tareas',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 10),
+                  // LISTVIEW.BUILDER: LISTA DESPLAZABLE
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      itemCount: viewModel.tasks.length,
+                      itemBuilder: (context, index) {
+                        final Task task = viewModel.tasks[index];
 
-                  // BOTONES
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () => _addTask(context),
-                          icon: const Icon(Icons.add),
-                          label: const Text('Agregar'),
-                        ),
-                      ),
-
-                      const SizedBox(width: 8),
-
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: viewModel.pendingTasks > 0
-                              ? () => _completeTask(context)
-                              : null,
-                          icon: const Icon(Icons.check),
-                          label: const Text('Completar'),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 6),
-
-                  Center(
-                    child: Text(
-                      viewModel.statusMessage,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        return TaskCard(
+                          key: ValueKey(task.id),
+                          task: task,
+                          onTap: () => context.push('/task/${task.id}'),
+                        );
+                      },
                     ),
                   ),
                 ],
               ),
             ),
-
-            // TÍTULO DEL LISTADO
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Listado de tareas',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-
-            // LISTVIEW.BUILDER: LISTA DESPLAZABLE
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                itemCount: viewModel.tasks.length,
-                itemBuilder: (context, index) {
-                  final Task task = viewModel.tasks[index];
-
-                  return TaskCard(
-                    key: ValueKey(task.id),
-                    task: task,
-                    onTap: () => context.push('/task/${task.id}'),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

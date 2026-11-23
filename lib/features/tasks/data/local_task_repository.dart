@@ -12,6 +12,9 @@ class LocalTaskRepository extends TaskRepository {
   @override
   List<Task> get tasks => _tasks;
 
+  @override
+  Future<List<Task>> getTasks() async => _tasks;
+
   void _save(List<Task> updated) {
     // Publicar solo después de guardar: un fallo no modifica el estado visible.
     _service.writeTasks(updated.map((task) => task.toJson()).toList());

@@ -28,6 +28,32 @@ void main() {
     expect(restored.toJson(), validJson);
   });
 
+  test('Adapta completed y campos ausentes de JSONPlaceholder', () {
+    final task = Task.fromJson({
+      'id': 21,
+      'userId': 2,
+      'title': 'Tarea API',
+      'completed': true,
+    });
+    expect(task.isCompleted, isTrue);
+    expect(task.description, 'Sin descripción (API)');
+    expect(task.priority, 'Sin prioridad (API)');
+    expect(Task.fromJson(task.toJson()).toJson(), task.toJson());
+    expect(
+      Task.fromJson({...validJson, 'completed': true}).isCompleted,
+      isFalse,
+    );
+    expect(
+      () => Task.fromJson({
+        'id': 21,
+        'userId': 2,
+        'title': 'API',
+        'completed': 'true',
+      }),
+      throwsFormatException,
+    );
+  });
+
   test('Los cinco objetos locales forman una lista JSON válida', () {
     final decoded = jsonDecode(
       jsonEncode(demoTasks.map((t) => t.toJson()).toList()),
@@ -43,7 +69,7 @@ void main() {
   });
 
   test('Rechaza cada campo ausente y entradas inválidas', () {
-    for (final key in validJson.keys) {
+    for (final key in ['id', 'title', 'isCompleted', 'userId']) {
       final incomplete = Map<String, dynamic>.of(validJson)..remove(key);
       expect(
         () => Task.fromJson(incomplete),
