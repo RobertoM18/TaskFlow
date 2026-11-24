@@ -306,3 +306,33 @@ El permiso `android.permission.INTERNET` está declarado una sola vez en el mani
 Las capturas se renderizan mediante pruebas de widgets usando la respuesta real guardada; no se presentan como capturas de un teléfono. La petición HTTP real se comprueba separadamente con `tool/api_smoke_test.dart`, que usa el mismo Service y Dio de la app. La suite habitual usa un adaptador HTTP simulado para ser reproducible sin internet.
 
 Las pruebas cubren la URL y el filtro, HTTP no exitoso, timeout, respuesta inválida, lista vacía, reintento, navegación, carga de enlaces directos, cambio local sin otra petición, recuperación del estado remoto al recargar, y liberación durante una petición pendiente. Las pruebas locales y las cinco tareas propias de las sesiones anteriores se mantienen.
+
+
+## Sesión 8: carga, datos, vacío y error
+
+El listado conserva su diseño, la API y `userId = 2`. El ViewModel expone `isEmpty` solo cuando no hay carga ni error y la lista está vacía. La prioridad visual es **carga → error → vacío → datos**; un fallo nunca se presenta como una respuesta vacía. El Repository conserva su última caché válida ante un error, pero la View muestra el error en lugar de esas tareas hasta recuperar la consulta.
+
+- **Carga:** indicador con etiqueta accesible «Cargando tareas». Se limpia el error al comenzar y se deshabilita Actualizar en la barra. `loadTasks()` ignora llamadas simultáneas y siempre termina la carga en `finally`.
+- **Datos:** tarjetas con navegación por id y acciones locales existentes. El botón de la barra «Actualizar tareas» y el gesto de deslizar hacia abajo vuelven a consultar. `AlwaysScrollableScrollPhysics` permite el gesto incluso si la lista tiene una sola tarea.
+- **Vacío:** «Todavía no hay tareas para mostrar.» y botón **Actualizar**. Se trata de una respuesta válida, no de un error.
+- **Error:** «No se pudieron cargar las tareas.» y botón **Reintentar**. La excepción técnica queda en consola. Reintentar puede recuperar la lista sin reiniciar ni reconstruir la app.
+
+### Cómo se provocaron y comprobaron los estados
+
+Se utilizó el adaptador HTTP de pruebas en `test/api_widget_test.dart`, manteniendo el Service, Repository, ViewModel y Views reales. No se introdujeron esperas artificiales ni fallos en el código de producción y no se modificó el usuario remoto válido.
+
+1. **Éxito:** respuesta HTTP 200 con los datos públicos guardados del usuario 2; se abre el detalle por el id seleccionado.
+2. **Carga:** un `Completer` mantiene una respuesta pendiente solo en la prueba. Se comprueban indicador, ausencia de Reintentar/Actualizar en el cuerpo y deshabilitación de la acción de la barra.
+3. **Error:** el adaptador devuelve HTTP 503 al actualizar una lista ya cargada. Se verifica que aparezca error, sin confundirlo con vacío ni mostrar la caché antigua como si fuera una respuesta nueva.
+4. **Vacío:** una respuesta HTTP 200 con `[]` después de Reintentar muestra Actualizar y oculta Reintentar.
+5. **Recuperación:** tras otro fallo, Reintentar devuelve una respuesta válida y reaparece la lista en la misma instancia de la aplicación. Finalmente, se actualiza una lista corta con el gesto y se abre de nuevo su detalle.
+
+En una prueba manual puede desconectarse la red y pulsar Actualizar, reconectarla y pulsar Reintentar. Para vacío se puede usar temporalmente `userId=9999` con Hot Restart, restaurando después **2**; en las pruebas automatizadas se simula `[]` sin tocar esa constante. Recargar restaura los estados remotos: las marcas locales no se guardan en el servidor.
+
+Evidencia renderizada mediante pruebas de widgets:
+
+- [Listado remoto](test/evidence/listado_api.png).
+- [Respuesta vacía con Actualizar](test/evidence/vacio_api.png).
+- [Error con Reintentar](test/evidence/error_api.png).
+
+Las pruebas también verifican recuperación sin reiniciar, consultas no duplicadas y continuidad del detalle. Se mantienen los tests de las tareas locales y las capturas previas, actualizando únicamente el listado para incluir el nuevo botón de la barra.

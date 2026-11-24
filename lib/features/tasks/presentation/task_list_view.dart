@@ -47,12 +47,21 @@ class TaskListView extends StatelessWidget {
         centerTitle: true,
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            tooltip: 'Actualizar tareas',
+            onPressed: viewModel.isLoading
+                ? null
+                : () => context.read<TasksViewModel>().loadTasks(),
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
       ),
 
       body:
           viewModel.isLoading ||
               viewModel.errorMessage != null ||
-              viewModel.tasks.isEmpty
+              viewModel.isEmpty
           ? const TaskLoadStatus()
           : SafeArea(
               child: Column(
@@ -210,18 +219,23 @@ class TaskListView extends StatelessWidget {
 
                   // LISTVIEW.BUILDER: LISTA DESPLAZABLE
                   Expanded(
-                    child: ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      itemCount: viewModel.tasks.length,
-                      itemBuilder: (context, index) {
-                        final Task task = viewModel.tasks[index];
+                    child: RefreshIndicator(
+                      onRefresh: () =>
+                          context.read<TasksViewModel>().loadTasks(),
+                      child: ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        itemCount: viewModel.tasks.length,
+                        itemBuilder: (context, index) {
+                          final Task task = viewModel.tasks[index];
 
-                        return TaskCard(
-                          key: ValueKey(task.id),
-                          task: task,
-                          onTap: () => context.push('/task/${task.id}'),
-                        );
-                      },
+                          return TaskCard(
+                            key: ValueKey(task.id),
+                            task: task,
+                            onTap: () => context.push('/task/${task.id}'),
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ],

@@ -118,7 +118,7 @@ void main() {
     expect(find.text('No se pudieron cargar las tareas.'), findsOneWidget);
     await tester.tap(find.text('Reintentar'));
     await tester.pumpAndSettle();
-    expect(find.text('No hay tareas para mostrar.'), findsOneWidget);
+    expect(find.text('Todavía no hay tareas para mostrar.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -143,4 +143,84 @@ void main() {
     expect(find.text('Usuario: 2'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+  testWidgets(
+    'Actualizar, vacío, error y Reintentar recuperan la misma sesión',
+    (tester) async {
+      tester.view.physicalSize = const Size(1000, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final pending = Completer<ResponseBody>();
+      var request = 0;
+      final adapter = ApiAdapter((_) {
+        request++;
+        if (request == 1 || request >= 5) return jsonResponse([rows.first]);
+        if (request == 2) return pending.future;
+        if (request == 3) return jsonResponse([]);
+        return jsonResponse({}, status: 503);
+      });
+      final dio = testDio(adapter);
+      addTearDown(() => dio.close());
+      await tester.pumpWidget(
+        TaskFlowApp(
+          repositoryFactory: () =>
+              RemoteTaskRepository(TaskApiService(dio: dio)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(rows.first['title'] as String), findsOneWidget);
+      // Barra de actualización: no permite repetir una petición en curso.
+      await tester.tap(find.byTooltip('Actualizar tareas'));
+      await tester.pump();
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(
+        tester
+            .widget<IconButton>(
+              find.byWidgetPredicate(
+                (widget) =>
+                    widget is IconButton &&
+                    widget.tooltip == 'Actualizar tareas',
+              ),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(find.text('Actualizar'), findsNothing);
+      expect(find.text('Reintentar'), findsNothing);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(adapter.requests, hasLength(2));
+      pending.complete(jsonResponse({}, status: 503));
+      await tester.pumpAndSettle();
+      expect(find.text('No se pudieron cargar las tareas.'), findsOneWidget);
+      expect(find.text('Todavía no hay tareas para mostrar.'), findsNothing);
+      await expectLater(
+        find.byType(TaskFlowApp),
+        matchesGoldenFile('evidence/error_api.png'),
+      );
+      await tester.tap(find.text('Reintentar'));
+      await tester.pumpAndSettle();
+      expect(find.text('Todavía no hay tareas para mostrar.'), findsOneWidget);
+      expect(find.text('Reintentar'), findsNothing);
+      await expectLater(
+        find.byType(TaskFlowApp),
+        matchesGoldenFile('evidence/vacio_api.png'),
+      );
+      await tester.tap(find.text('Actualizar'));
+      await tester.pumpAndSettle();
+      expect(find.text('Reintentar'), findsOneWidget);
+      await tester.tap(find.text('Reintentar'));
+      await tester.pumpAndSettle();
+      expect(find.text(rows.first['title'] as String), findsOneWidget);
+      expect(adapter.requests, hasLength(5));
+      // Una lista corta también permite deslizar para actualizar.
+      await tester.drag(find.byType(ListView), const Offset(0, 400));
+      await tester.pumpAndSettle();
+      expect(adapter.requests, hasLength(6));
+      await tester.tap(find.text(rows.first['title'] as String));
+      await tester.pumpAndSettle();
+      expect(find.text('Identificador: ${rows.first['id']}'), findsOneWidget);
+      expect(find.text('Usuario: 2'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

@@ -91,6 +91,7 @@ void main() {
     addTearDown(vm.dispose);
     final pending = vm.loadTasks();
     expect(vm.isLoading, isTrue);
+    expect(vm.isEmpty, isFalse);
     await vm.loadTasks(); // No duplica consultas en curso.
     await started.future;
     expect(adapter.requests, hasLength(1));
@@ -98,11 +99,14 @@ void main() {
     await pending;
     expect(vm.isLoading, isFalse);
     expect(vm.errorMessage, 'No se pudieron cargar las tareas.');
+    expect(vm.isEmpty, isFalse);
     await vm.loadTasks();
     expect(vm.errorMessage, isNull);
     expect(vm.tasks, isEmpty);
+    expect(vm.isEmpty, isTrue);
     await vm.loadTasks();
     expect(vm.tasks, hasLength(1));
+    expect(vm.isEmpty, isFalse);
   });
 
   test('Timeout de red conserva caché y termina la carga', () async {

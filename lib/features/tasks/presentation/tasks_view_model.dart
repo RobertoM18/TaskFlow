@@ -16,6 +16,7 @@ class TasksViewModel extends ChangeNotifier {
   bool _disposed = false;
   String? _errorMessage;
   bool get isLoading => _isLoading;
+  bool get isEmpty => !isLoading && errorMessage == null && tasks.isEmpty;
   String? get errorMessage => _errorMessage;
   bool get canCreateTasks => _repository.canCreateTasks && !isLoading;
 
