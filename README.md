@@ -336,3 +336,20 @@ Evidencia renderizada mediante pruebas de widgets:
 - [Error con Reintentar](test/evidence/error_api.png).
 
 Las pruebas también verifican recuperación sin reiniciar, consultas no duplicadas y continuidad del detalle. Se mantienen los tests de las tareas locales y las capturas previas, actualizando únicamente el listado para incluir el nuevo botón de la barra.
+
+
+## Sesión 9: formulario de tareas
+
+La acción **Nueva tarea** abre `/new`. El formulario usa `Form`, `GlobalKey<FormState>` y controladores liberados en `dispose`. El título se recorta y debe tener al menos tres caracteres; la descripción es opcional y se recorta. La prioridad permite Alta, Media (por defecto) o Baja. La fecha es opcional: se elige con `showDatePicker`, se puede quitar y no se exige para guardar.
+
+`TaskDraft`, en la capa domain, contiene título, descripción, prioridad y fecha opcional. Guardar valida y devuelve ese borrador a la lista mediante `context.pop`. La lista muestra **Formulario válido: [título]**. Todavía no se realiza POST ni se añade una tarea al repositorio; el envío corresponde a la siguiente sesión. Cancelar o volver descarta el formulario sin mensaje. Las rutas de lista y detalle y los cuatro estados remotos se conservan.
+
+### Evidencia y comprobación
+
+Capturas renderizadas por las pruebas de widgets con respuestas HTTP simuladas:
+
+- [Errores de validación](test/evidence/formulario_errores.png): Guardar con título vacío.
+- [Formulario válido](test/evidence/formulario_valido.png): título y descripción completos, prioridad Alta, fecha opcional sin seleccionar.
+- [Mensaje de retorno](test/evidence/formulario_retorno.png): Guardar devuelve el título sin espacios exteriores a la lista.
+
+La prueba también verifica título de dos caracteres y solo espacios, selección y eliminación de fecha, guardado sin fecha, cancelación sin mensaje, formulario limpio al reabrir y continuidad del detalle por id. El adaptador registra una única consulta inicial: el formulario no hace escrituras HTTP. Ejecutar `flutter test` para reproducir las verificaciones y comparar las capturas.

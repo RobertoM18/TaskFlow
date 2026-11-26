@@ -223,4 +223,100 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+  testWidgets(
+    'Formulario valida, cancela y devuelve borrador sin escribir en API',
+    (tester) async {
+      tester.view.physicalSize = const Size(1000, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final adapter = ApiAdapter((_) => jsonResponse(rows));
+      final dio = testDio(adapter);
+      addTearDown(() => dio.close());
+      await tester.pumpWidget(
+        TaskFlowApp(
+          repositoryFactory: () =>
+              RemoteTaskRepository(TaskApiService(dio: dio)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Nueva tarea'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Guardar'));
+      await tester.pumpAndSettle();
+      expect(find.text('Escribe un título para tu tarea.'), findsOneWidget);
+      await expectLater(
+        find.byType(TaskFlowApp),
+        matchesGoldenFile('evidence/formulario_errores.png'),
+      );
+      await tester.enterText(find.byType(TextFormField).first, ' ab ');
+      await tester.tap(find.text('Guardar'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('El título debe tener al menos 3 caracteres.'),
+        findsOneWidget,
+      );
+      await tester.enterText(find.byType(TextFormField).first, '   ');
+      await tester.tap(find.text('Guardar'));
+      await tester.pumpAndSettle();
+      expect(find.text('Escribe un título para tu tarea.'), findsOneWidget);
+      await tester.enterText(
+        find.byType(TextFormField).first,
+        '  Preparar exposición  ',
+      );
+      await tester.enterText(
+        find.byType(TextFormField).at(1),
+        '  Revisar diapositivas y practicar.  ',
+      );
+      await tester.tap(find.text('Media'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Alta').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Elegir fecha (opcional)'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Aceptar'));
+      await tester.pumpAndSettle();
+      expect(find.text('Quitar fecha'), findsOneWidget);
+      await tester.tap(find.text('Quitar fecha'));
+      await tester.pumpAndSettle();
+      // Revalidar antes de capturar el formulario válido, sin navegar.
+      tester.state<FormState>(find.byType(Form)).validate();
+      await tester.pumpAndSettle();
+      await expectLater(
+        find.byType(TaskFlowApp),
+        matchesGoldenFile('evidence/formulario_valido.png'),
+      );
+      await tester.tap(find.text('Guardar'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Formulario válido: Preparar exposición'),
+        findsOneWidget,
+      );
+      await expectLater(
+        find.byType(TaskFlowApp),
+        matchesGoldenFile('evidence/formulario_retorno.png'),
+      );
+      expect(adapter.requests, hasLength(1));
+      expect(find.text('Preparar exposición'), findsNothing);
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Nueva tarea'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<TextFormField>(find.byType(TextFormField).first)
+            .controller!
+            .text,
+        isEmpty,
+      );
+      await tester.tap(find.text('Cancelar'));
+      await tester.pumpAndSettle();
+      expect(find.byType(SnackBar), findsNothing);
+      await tester.tap(find.text(rows.first['title'] as String));
+      await tester.pumpAndSettle();
+      expect(find.text('Identificador: ${rows.first['id']}'), findsOneWidget);
+      expect(adapter.requests, hasLength(1));
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

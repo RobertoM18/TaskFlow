@@ -1,3 +1,5 @@
+import '../domain/task_draft.dart';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -38,6 +40,17 @@ class TaskListView extends StatelessWidget {
   Widget build(BuildContext context) {
     final viewModel = context.watch<TasksViewModel>();
     return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          final draft = await context.push<TaskDraft>('/new');
+          if (!context.mounted || draft == null) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Formulario válido: ${draft.title}')),
+          );
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Nueva tarea'),
+      ),
       // APPBAR CORREGIDO SEGÚN EL DOCENTE
       appBar: AppBar(
         title: const Text(
@@ -224,7 +237,7 @@ class TaskListView extends StatelessWidget {
                           context.read<TasksViewModel>().loadTasks(),
                       child: ListView.builder(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
                         itemCount: viewModel.tasks.length,
                         itemBuilder: (context, index) {
                           final Task task = viewModel.tasks[index];
